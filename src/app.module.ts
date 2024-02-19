@@ -1,14 +1,15 @@
-import {Module} from '@nestjs/common';
-import {AppController} from './app.controller';
-import {AppService} from './app.service';
-import {TypeOrmModule} from '@nestjs/typeorm';
-import {UserModule} from './user/user.module';
-import {User} from './user/entities/user.entity';
-import {Role} from './user/entities/role.entity';
-import {Permission} from './user/entities/permission.entity';
-import {EmailModule} from './email/email.module';
-import {RedisModule} from './redis/redis.module';
-import {ConfigModule, ConfigService} from '@nestjs/config';
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { UserModule } from './user/user.module';
+import { User } from './user/entities/user.entity';
+import { Role } from './user/entities/role.entity';
+import { Permission } from './user/entities/permission.entity';
+import { EmailModule } from './email/email.module';
+import { RedisModule } from './redis/redis.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
     imports: [
@@ -31,13 +32,25 @@ import {ConfigModule, ConfigService} from '@nestjs/config';
                     extra: {
                         authPlugin: 'sha256_password',
                     }
-                }
+                };
             },
             inject: [ConfigService]
         }),
         ConfigModule.forRoot({
             isGlobal: true,
             envFilePath: 'src/.env'
+        }),
+        JwtModule.registerAsync({
+            global: true,
+            useFactory(configService: ConfigService) {
+                return {
+                    secret: configService.get('JWT_SECRET'),
+                    signOptions: {
+                        expiresIn: '30m'
+                    }
+                };
+            },
+            inject: [ConfigService]
         }),
         UserModule,
         EmailModule,

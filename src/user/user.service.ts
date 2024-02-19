@@ -1,13 +1,15 @@
-import {HttpException, HttpStatus, Inject, Injectable, Logger} from '@nestjs/common';
-import {InjectEntityManager, InjectRepository} from '@nestjs/typeorm';
-import {User} from './entities/user.entity';
-import {Repository} from 'typeorm';
-import {RegisterUserDto} from './dto/register-user.dto';
-import {RedisService} from 'src/redis/redis.service';
-import {md5} from 'src/utils';
-import {EmailService} from 'src/email/email.service';
-import {Role} from "./entities/role.entity";
-import {Permission} from "./entities/permission.entity";
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { User } from './entities/user.entity';
+import { Repository } from 'typeorm';
+import { RegisterUserDto } from './dto/register-user.dto';
+import { RedisService } from 'src/redis/redis.service';
+import { md5 } from 'src/utils';
+import { EmailService } from 'src/email/email.service';
+import { Role } from './entities/role.entity';
+import { Permission } from './entities/permission.entity';
+import { LoginUserDto } from './dto/login-user.dto';
+import { LoginUserVo } from './vo/login-user.vo';
 
 @Injectable()
 export class UserService {
@@ -30,17 +32,17 @@ export class UserService {
 
     async initData() {
         const user1 = new User();
-        user1.username = "zhangSan";
-        user1.password = md5("111111");
-        user1.email = "xxx@xx.com";
+        user1.username = 'zhangSan';
+        user1.password = md5('111111');
+        user1.email = 'xxx@xx.com';
         user1.isAdmin = true;
         user1.nickName = '张三';
         user1.phoneNumber = '13233323333';
 
         const user2 = new User();
         user2.username = 'liSi';
-        user2.password = md5("222222");
-        user2.email = "yy@yy.com";
+        user2.password = md5('222222');
+        user2.email = 'yy@yy.com';
         user2.nickName = '李四';
 
         const role1 = new Role();
@@ -75,7 +77,7 @@ export class UserService {
 
         if (captcha !== user.captcha) throw new HttpException('验证码错误', HttpStatus.BAD_REQUEST);
 
-        const foundUser = await this.userRepository.findOneBy({username: user.username});
+        const foundUser = await this.userRepository.findOneBy({ username: user.username });
 
         if (foundUser) throw new HttpException('用户已存在', HttpStatus.BAD_REQUEST);
 
@@ -94,7 +96,6 @@ export class UserService {
         }
     }
 
-
     async captcha(email: string) {
         const code = Math.random().toString().slice(2, 8);
 
@@ -106,5 +107,43 @@ export class UserService {
             html: `<p>您的验证码为：${code}</p>`
         });
         return '发送成功';
+    }
+
+    //用户登录
+    async userLogin(loginUser: LoginUserDto, isAdmin: boolean) {
+        const user = await this.userRepository.findOne({
+            where: {
+                username: loginUser.username,
+                isAdmin
+            },
+            relations: ['roles', 'roles.permissions']
+        });
+
+        if (!user) throw new HttpException('用户不存在', HttpStatus.BAD_REQUEST);
+
+        if (user.password !== md5(loginUser.password)) throw new HttpException('密码错误', HttpStatus.BAD_REQUEST);
+
+        const vo = new LoginUserVo();
+        vo.userInfo = {
+            id: user.id,
+            username: user.username,
+            nickName: user.nickName,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+            headPic: user.headPic,
+            createTime: user.createTime,
+            isAdmin: user.isAdmin,
+            isFrozen: user.isFrozen,
+            roles: user.roles.map(item => item.name),
+            permissions: user.roles.reduce((curr, next) => {
+                next.permissions.forEach(permission => {
+                    if (curr.indexOf(permission) === -1) curr.push(permission);
+                });
+                return curr;
+            }, [])
+
+        };
+
+        return vo;
     }
 }
