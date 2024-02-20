@@ -70,6 +70,7 @@ export class UserService {
         await this.userRepository.save([user1, user2]);
     }
 
+    //用户注册
     async register(user: RegisterUserDto) {
         const captcha = await this.redisService.get(`captcha_${user.email}`);
 
@@ -96,6 +97,7 @@ export class UserService {
         }
     }
 
+    //邮箱发送验证码
     async captcha(email: string) {
         const code = Math.random().toString().slice(2, 8);
 
@@ -145,5 +147,28 @@ export class UserService {
         };
 
         return vo;
+    }
+
+    async findOneById(userId: number, isAdmin: boolean) {
+        const user = await this.userRepository.findOne({
+            where: {
+                id: userId,
+                isAdmin
+            },
+            relations: ['roles', 'roles.permissions']
+        });
+
+        return {
+            id: user.id,
+            username: user.username,
+            isAdmin: user.isAdmin,
+            roles: user.roles.map(item => item.name),
+            permissions: user.roles.reduce((curr, next) => {
+                next.permissions.forEach(permission => {
+                    if (curr.indexOf(permission) === -1) curr.push(permission);
+                });
+                return curr;
+            }, [])
+        };
     }
 }
