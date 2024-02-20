@@ -1,6 +1,6 @@
-import {Inject, Injectable} from '@nestjs/common';
-import {createTransport, Transporter} from 'nodemailer';
-import {ConfigService} from "@nestjs/config";
+import { Inject, Injectable } from '@nestjs/common';
+import { createTransport, Transporter } from 'nodemailer';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class EmailService {
@@ -18,7 +18,7 @@ export class EmailService {
         });
     }
 
-    async sendEmail({to, subject, html}) {
+    async sendEmail({ to, subject, html }) {
         await this.transporter.sendMail({
             from: {
                 name: '会议室预定系统',
