@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
-import { RequireLogin, RequirePermission, UserInfo } from './custom.decorator';
+import { RequireLogin, RequirePermission } from './custom.decorator';
+
 @Controller()
 export class AppController {
     constructor(private readonly appService: AppService) {
@@ -14,8 +15,7 @@ export class AppController {
     @Get('aaa')
     @RequireLogin()
     @RequirePermission('ddd')
-    async aaa(@UserInfo() user) {
-        console.log(user);
+    async aaa() {
         return 'aaa';
     }
 

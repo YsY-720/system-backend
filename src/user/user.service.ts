@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { RegisterUserDto } from './dto/register-user.dto';
@@ -10,6 +10,8 @@ import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 import { LoginUserDto } from './dto/login-user.dto';
 import { LoginUserVo } from './vo/login-user.vo';
+import { UserInfoVo } from './vo/user-info.vo';
+import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 
 @Injectable()
 export class UserService {
@@ -170,5 +172,46 @@ export class UserService {
                 return curr;
             }, [])
         };
+    }
+
+    //获取用户详细信息
+    async findUserDetailBuId(userId: number) {
+        const user = await this.userRepository.findOne({
+            where: {
+                id: userId
+            }
+        });
+        const vo = new UserInfoVo();
+        vo.id = user.id;
+        vo.username = user.username;
+        vo.nickName = user.nickName;
+        vo.email = user.email;
+        vo.headPic = user.headPic;
+        vo.phoneNumber = user.phoneNumber;
+        vo.isFrozen = user.isFrozen;
+        vo.createTime = user.createTime;
+
+        return vo;
+    }
+
+    //修改密码
+    async updatePassword(userId: number, passwordDto: UpdateUserPasswordDto) {
+        const captcha = await this.redisService.get(`captcha_${passwordDto.email}`);
+
+        if (!captcha) throw new HttpException('验证码已失效', HttpStatus.BAD_REQUEST);
+
+        if (passwordDto.captcha !== captcha) throw new HttpException('验证码不正确', HttpStatus.BAD_REQUEST);
+
+        const foundUser = await this.userRepository.findOneBy({ id: userId });
+
+        foundUser.password = md5(passwordDto.password);
+
+        try {
+            await this.userRepository.save(foundUser);
+            return '密码修改成功';
+        } catch (e) {
+            this.logger.error(e, UserService);
+            return '密码修改失败';
+        }
     }
 }

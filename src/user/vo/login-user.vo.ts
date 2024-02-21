@@ -22,6 +22,7 @@ interface UserInfo {
     permissions: string[];
 }
 
+//用户登录成功后返回结果ViewObject
 export class LoginUserVo {
     userInfo: UserInfo;
 

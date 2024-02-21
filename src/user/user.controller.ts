@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Inject, Query, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Post, Query, UnauthorizedException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { RequireLogin, UserInfo } from '../custom.decorator';
+import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 
 @Controller('user')
 export class UserController {
@@ -80,6 +82,25 @@ export class UserController {
         return adminVo;
     }
 
+    private setUserAccessToken = (user) => {
+        return this.jwtService.sign({
+            userId: user.id,
+            username: user.username,
+            roles: user.roles,
+            permissions: user.permissions
+        }, {
+            expiresIn: this.configService.get('JWT_ACCESS_TOKEN_EXPIRES_TIME') || '30m'
+        });
+    };
+
+    private setUserRefreshToken = user => {
+        return this.jwtService.sign({
+            userId: user.id
+        }, {
+            expiresIn: this.configService.get('JWT_REFRESH_TOKEN_EXPIRES_TIME') || '7d'
+        });
+    };
+
     //用户刷新token
     @Get('refresh')
     async userRefresh(@Query('refreshToken') refreshToken: string) {
@@ -88,21 +109,9 @@ export class UserController {
 
             const user = await this.userService.findOneById(data.userId, false);
 
-            const access_token = this.jwtService.sign({
-                userId: user.id,
-                username: user.username,
-                roles: user.roles,
-                permissions: user.permissions
-            }, {
-                expiresIn: this.configService.get('JWT_ACCESS_TOKEN_EXPIRES_TIME') || '30m'
-            });
+            const access_token = this.setUserAccessToken(user);
 
-
-            const refresh_token = this.jwtService.sign({
-                userId: user.id
-            }, {
-                expiresIn: this.configService.get('JWT_REFRESH_TOKEN_EXPIRES_TIME') || '7d'
-            });
+            const refresh_token = this.setUserRefreshToken(user);
 
             return {
                 access_token,
@@ -122,21 +131,9 @@ export class UserController {
 
             const user = await this.userService.findOneById(data.userId, true);
 
-            const access_token = this.jwtService.sign({
-                userId: user.id,
-                username: user.username,
-                roles: user.roles,
-                permissions: user.permissions
-            }, {
-                expiresIn: this.configService.get('JWT_ACCESS_TOKEN_EXPIRES_TIME') || '30m'
-            });
+            const access_token = this.setUserAccessToken(user);
 
-
-            const refresh_token = this.jwtService.sign({
-                userId: user.id
-            }, {
-                expiresIn: this.configService.get('JWT_REFRESH_TOKEN_EXPIRES_TIME') || '7d'
-            });
+            const refresh_token = this.setUserRefreshToken(user);
 
             return {
                 access_token,
@@ -146,5 +143,19 @@ export class UserController {
         } catch (e) {
             throw new UnauthorizedException('token 已失效,请重新登陆');
         }
+    }
+
+    //获取用户信息
+    @Get('info')
+    @RequireLogin()
+    async info(@UserInfo('userId') userId: number) {
+        return await this.userService.findUserDetailBuId(userId);
+    }
+
+    //修改密码
+    @Post(['update_password', 'admin/update_password'])
+    @RequireLogin()
+    async updatePassword(@UserInfo('userId') userId: number, @Body() passwordDto: UpdateUserPasswordDto) {
+        return await this.userService.updatePassword(userId, passwordDto);
     }
 }
