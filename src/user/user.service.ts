@@ -1,17 +1,17 @@
 import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
-import { RegisterUserDto } from './dto/register-user.dto';
-import { RedisService } from 'src/redis/redis.service';
 import { md5 } from 'src/utils';
+import { RedisService } from 'src/redis/redis.service';
 import { EmailService } from 'src/email/email.service';
+import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 import { LoginUserDto } from './dto/login-user.dto';
+import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
+import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserVo } from './vo/login-user.vo';
 import { UserInfoVo } from './vo/user-info.vo';
-import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 
 @Injectable()
 export class UserService {
@@ -72,9 +72,37 @@ export class UserService {
         await this.userRepository.save([user1, user2]);
     }
 
+    //注册-发送验证码
+    async login_captcha(email: string) {
+        const code = Math.random().toString().slice(2, 8);
+
+        await this.redisService.set(`resister_captcha_${email}`, code, 5 * 30);
+
+        await this.emailService.sendEmail({
+            to: email,
+            subject: '注册验证码',
+            html: `<p>您的验证码为：${code}</p>`
+        });
+        return '发送成功';
+    }
+
+    //修改密码-发送验证码
+    async updatePassword_captcha(email: string) {
+        const code = Math.random().toString().slice(2, 8);
+
+        await this.redisService.set(`update_password_captcha_${email}`, code, 10 * 60);
+
+        await this.emailService.sendEmail({
+            to: email,
+            subject: '更改密码验证码',
+            html: `<p>您的验证码为：${code}</p>`
+        });
+        return '发送成功';
+    }
+
     //用户注册
     async register(user: RegisterUserDto) {
-        const captcha = await this.redisService.get(`captcha_${user.email}`);
+        const captcha = await this.redisService.get(`resister_captcha_${user.email}`);
 
         if (!captcha) throw new HttpException('验证码已失效', HttpStatus.BAD_REQUEST);
 
@@ -97,20 +125,6 @@ export class UserService {
             this.logger.error(e, UserService);
             return '注册失败';
         }
-    }
-
-    //邮箱发送验证码
-    async captcha(email: string) {
-        const code = Math.random().toString().slice(2, 8);
-
-        await this.redisService.set(`captcha_${email}`, code, 5 * 30);
-
-        await this.emailService.sendEmail({
-            to: email,
-            subject: '注册验证码',
-            html: `<p>您的验证码为：${code}</p>`
-        });
-        return '发送成功';
     }
 
     //用户登录
@@ -151,6 +165,7 @@ export class UserService {
         return vo;
     }
 
+    //根据id查询用户所有信息
     async findOneById(userId: number, isAdmin: boolean) {
         const user = await this.userRepository.findOne({
             where: {

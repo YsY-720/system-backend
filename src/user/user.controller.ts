@@ -32,8 +32,13 @@ export class UserController {
     }
 
     @Get('register_captcha')
-    async captcha(@Query('email') email: string) {
-        return this.userService.captcha(email);
+    async login_captcha(@Query('email') email: string) {
+        return this.userService.login_captcha(email);
+    }
+
+    @Get('update_password/captcha')
+    async updatePassword_captcha(@Query('email') email: string) {
+        return await this.userService.updatePassword_captcha(email);
     }
 
     //普通用户登录
