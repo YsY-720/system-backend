@@ -12,6 +12,7 @@ import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserVo } from './vo/login-user.vo';
 import { UserInfoVo } from './vo/user-info.vo';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
@@ -87,7 +88,7 @@ export class UserService {
     }
 
     //修改密码-发送验证码
-    async updatePassword_captcha(email: string) {
+    async update_password_captcha(email: string) {
         const code = Math.random().toString().slice(2, 8);
 
         await this.redisService.set(`update_password_captcha_${email}`, code, 10 * 60);
@@ -95,6 +96,20 @@ export class UserService {
         await this.emailService.sendEmail({
             to: email,
             subject: '更改密码验证码',
+            html: `<p>您的验证码为：${code}</p>`
+        });
+        return '发送成功';
+    }
+
+    //修改信息-发送验证码
+    async update_user_captcha(email: string) {
+        const code = Math.random().toString().slice(2, 8);
+
+        await this.redisService.set(`update_user_captcha_${email}`, code, 10 * 60);
+
+        await this.emailService.sendEmail({
+            to: email,
+            subject: '更新信息验证码',
             html: `<p>您的验证码为：${code}</p>`
         });
         return '发送成功';
@@ -227,6 +242,28 @@ export class UserService {
         } catch (e) {
             this.logger.error(e, UserService);
             return '密码修改失败';
+        }
+    }
+
+    //用户修改信息
+    async update(userId: number, updateUserDto: UpdateUserDto) {
+        const captcha = await this.redisService.get(`update_user_captcha_${updateUserDto.email}`);
+
+        if (!captcha) throw new HttpException('验证码失效', HttpStatus.BAD_REQUEST);
+
+        if (captcha !== updateUserDto.captcha) throw new HttpException('验证码不正确', HttpStatus.BAD_REQUEST);
+
+        const foundUser = await this.userRepository.findOneBy({ id: userId });
+        if (updateUserDto.headPic) foundUser.headPic = updateUserDto.headPic;
+        if (updateUserDto.nickName) foundUser.nickName = updateUserDto.nickName;
+        foundUser.email = updateUserDto.email;
+
+        try {
+            await this.userRepository.save(foundUser);
+            return '信息修改成功';
+        } catch (e) {
+            this.logger.error(e, UserService);
+            return '信息修改失败';
         }
     }
 }
