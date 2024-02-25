@@ -21,8 +21,8 @@ import { generateParseIntPipe } from '../utils';
 import { ApiBearerAuth, ApiBody, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { LoginUserVo } from './vo/login-user.vo';
 import { RefreshTokenVo } from './vo/refresh-token.vo';
-import { UserDetailVo } from './dto/user-detail.vo';
 import { UserListVo } from './vo/user-list.vo';
+import { UserInfoVo } from './vo/user-info.vo';
 
 @ApiTags('用户管理模块')
 @Controller('user')
@@ -279,23 +279,12 @@ export class UserController {
     @ApiResponse({
         status: HttpStatus.OK,
         description: 'success',
-        type: UserDetailVo
+        type: UserInfoVo
     })
     @Get('info')
     @RequireLogin()
     async info(@UserInfo('userId') userId: number) {
-        const user = await this.userService.findUserDetailBuId(userId);
-        const vo = new UserDetailVo();
-        vo.id = user.id;
-        vo.username = user.username;
-        vo.nickName = user.nickName;
-        vo.headPic = user.headPic;
-        vo.email = user.email;
-        vo.phoneNumber = user.phoneNumber;
-        vo.isFrozen = user.isFrozen;
-        vo.createTime = user.createTime;
-
-        return vo;
+        return await this.userService.findUserDetailBuId(userId);
     }
 
     //修改密码
