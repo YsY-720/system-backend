@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { md5 } from 'src/utils';
 import { RedisService } from 'src/redis/redis.service';
 import { EmailService } from 'src/email/email.service';
@@ -265,5 +265,41 @@ export class UserService {
             this.logger.error(e, UserService);
             return '信息修改失败';
         }
+    }
+
+    //用户冻结
+    async freezeUserById(id: number) {
+        const user = await this.userRepository.findOneBy({ id });
+        user.isFrozen = true;
+
+        try {
+            await this.userRepository.save(user);
+            return '操作成功';
+        } catch (e) {
+            this.logger.error(e, UserService);
+            return '操作失败';
+        }
+    }
+
+    //用户列表分页查询
+    async findUserByPage(pageNum: number, pageSize: number, username: string, nickName: string, email: string) {
+        const skipCount = (pageNum - 1) * pageSize;
+        const condition: Record<string, any> = {};
+
+        if (username) condition.username = Like(`%${username}%`);
+        if (nickName) condition.nickName = Like(`%${nickName}%`);
+        if (email) condition.email = Like(`%${email}%`);
+
+
+        const [users, totalCount] = await this.userRepository.findAndCount({
+            select: ['id', 'username', 'nickName', 'email', 'phoneNumber', 'headPic', 'isFrozen', 'createTime'],
+            skip: skipCount,
+            take: pageSize,
+            where: condition
+        });
+        return {
+            users,
+            totalCount
+        };
     }
 }
