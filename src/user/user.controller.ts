@@ -1,4 +1,14 @@
-import { Body, Controller, DefaultValuePipe, Get, Inject, Post, Query, UnauthorizedException } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    DefaultValuePipe,
+    Get,
+    HttpStatus,
+    Inject,
+    Post,
+    Query,
+    UnauthorizedException
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
@@ -8,7 +18,13 @@ import { RequireLogin, UserInfo } from '../custom.decorator';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { generateParseIntPipe } from '../utils';
+import { ApiBearerAuth, ApiBody, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { LoginUserVo } from './vo/login-user.vo';
+import { RefreshTokenVo } from './vo/refresh-token.vo';
+import { UserDetailVo } from './dto/user-detail.vo';
+import { UserListVo } from './vo/user-list.vo';
 
+@ApiTags('用户管理模块')
 @Controller('user')
 export class UserController {
 
@@ -27,28 +43,92 @@ export class UserController {
         return 'done';
     }
 
+    @ApiBody({ type: RegisterUserDto })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: '验证码已失效/验证码不正确/用户已存在',
+        type: String
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: '注册成功/失败',
+        type: String
+    })
     @Post('register')
     async register(@Body() registerUserDto: RegisterUserDto) {
         console.log(registerUserDto);
         return await this.userService.register(registerUserDto);
     }
 
+    @ApiQuery({
+        name: 'email',
+        type: String,
+        description: '邮箱地址',
+        required: true,
+        example: 'xxx@xx.com'
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: '发送成功',
+        type: String
+    })
     @Get('register_captcha')
     async login_captcha(@Query('email') email: string) {
         return this.userService.login_captcha(email);
     }
 
+    @ApiBearerAuth()
+    @ApiQuery({
+        name: 'email',
+        type: String,
+        description: '邮箱地址',
+        required: true,
+        example: 'xxx@xx.com'
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: '发送成功',
+        type: String
+    })
+    @RequireLogin()
     @Get('update_password/captcha')
     async update_password_captcha(@Query('email') email: string) {
         return await this.userService.update_password_captcha(email);
     }
 
+    @ApiBearerAuth()
+    @ApiQuery({
+        name: 'email',
+        type: String,
+        description: '邮箱地址',
+        required: true,
+        example: 'xxx@xx.com'
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: '发送成功',
+        type: String
+    })
+    @RequireLogin()
     @Get('update_user/captcha')
     async update_user_captcha(@Query('email') email: string) {
         return await this.userService.update_user_captcha(email);
     }
 
     //普通用户登录
+    @ApiBody({
+        type: LoginUserDto
+    })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: '用户不存在/密码错误',
+        type: String
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: '用户信息和 token',
+        type: LoginUserVo
+    })
     @Post('login')
     async userLogin(@Body() userLogin: LoginUserDto) {
         const userVo = await this.userService.userLogin(userLogin, false);
@@ -72,6 +152,19 @@ export class UserController {
     }
 
     //管理员登录
+    @ApiBody({
+        type: LoginUserDto
+    })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: '用户不存在/密码错误',
+        type: String
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: '用户信息和 token',
+        type: LoginUserVo
+    })
     @Post('admin/login')
     async adminLogin(@Body() userLogin: LoginUserDto) {
         const adminVo = await this.userService.userLogin(userLogin, true);
@@ -114,6 +207,21 @@ export class UserController {
     };
 
     //用户刷新token
+    @ApiQuery({
+        name: 'refreshToken',
+        type: String,
+        description: '刷新 token',
+        required: true,
+    })
+    @ApiResponse({
+        status: HttpStatus.UNAUTHORIZED,
+        description: 'token 已失效，请重新登录'
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: '刷新成功',
+        type: RefreshTokenVo
+    })
     @Get('refresh')
     async userRefresh(@Query('refreshToken') refreshToken: string) {
         try {
@@ -121,14 +229,11 @@ export class UserController {
 
             const user = await this.userService.findOneById(data.userId, false);
 
-            const access_token = this.setUserAccessToken(user);
+            const vo = new RefreshTokenVo();
+            vo.access_token = this.setUserAccessToken(user);
+            vo.refresh_token = this.setUserRefreshToken(user);
 
-            const refresh_token = this.setUserRefreshToken(user);
-
-            return {
-                access_token,
-                refresh_token
-            };
+            return vo;
 
         } catch (e) {
             throw new UnauthorizedException('token 已失效,请重新登陆');
@@ -136,6 +241,21 @@ export class UserController {
     }
 
     //管理员刷新token
+    @ApiQuery({
+        name: 'refreshToken',
+        type: String,
+        description: '刷新 token',
+        required: true,
+    })
+    @ApiResponse({
+        status: HttpStatus.UNAUTHORIZED,
+        description: 'token 已失效，请重新登录'
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: '刷新成功',
+        type: RefreshTokenVo
+    })
     @Get('admin/refresh')
     async adminRefresh(@Query('refreshToken') refreshToken: string) {
         try {
@@ -143,14 +263,11 @@ export class UserController {
 
             const user = await this.userService.findOneById(data.userId, true);
 
-            const access_token = this.setUserAccessToken(user);
+            const vo = new RefreshTokenVo();
+            vo.access_token = this.setUserAccessToken(user);
+            vo.refresh_token = this.setUserRefreshToken(user);
 
-            const refresh_token = this.setUserRefreshToken(user);
-
-            return {
-                access_token,
-                refresh_token
-            };
+            return vo;
 
         } catch (e) {
             throw new UnauthorizedException('token 已失效,请重新登陆');
@@ -158,13 +275,38 @@ export class UserController {
     }
 
     //获取用户信息
+    @ApiBearerAuth()
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: 'success',
+        type: UserDetailVo
+    })
     @Get('info')
     @RequireLogin()
     async info(@UserInfo('userId') userId: number) {
-        return await this.userService.findUserDetailBuId(userId);
+        const user = await this.userService.findUserDetailBuId(userId);
+        const vo = new UserDetailVo();
+        vo.id = user.id;
+        vo.username = user.username;
+        vo.nickName = user.nickName;
+        vo.headPic = user.headPic;
+        vo.email = user.email;
+        vo.phoneNumber = user.phoneNumber;
+        vo.isFrozen = user.isFrozen;
+        vo.createTime = user.createTime;
+
+        return vo;
     }
 
     //修改密码
+    @ApiBearerAuth()
+    @ApiBody({
+        type: UpdateUserPasswordDto
+    })
+    @ApiResponse({
+        type: String,
+        description: '验证码已失效/不正确'
+    })
     @Post(['update_password', 'admin/update_password'])
     @RequireLogin()
     async updatePassword(@UserInfo('userId') userId: number, @Body() passwordDto: UpdateUserPasswordDto) {
@@ -172,6 +314,19 @@ export class UserController {
     }
 
     //修改信息
+    @ApiBearerAuth()
+    @ApiBody({
+        type: UpdateUserDto
+    })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: '验证码已失效/不正确'
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: '更新成功',
+        type: String
+    })
     @Post(['update', 'admin/update'])
     @RequireLogin()
     async update(@UserInfo('userId') userId: number, @Body() updateUserDto: UpdateUserDto) {
@@ -179,12 +334,54 @@ export class UserController {
     }
 
     //冻结用户
+    @ApiBearerAuth()
+    @ApiQuery({
+        name: 'id',
+        description: 'userId',
+        type: Number
+    })
+    @ApiResponse({
+        type: String,
+        description: 'success'
+    })
+    @RequireLogin()
     @Get('freeze')
     async freezeUserById(@Query('id') id: string) {
         return await this.userService.freezeUserById(+id);
     }
 
     //用户列表分页查询
+    @ApiBearerAuth()
+    @ApiQuery({
+        name: 'pageNum',
+        description: '页码',
+        type: Number
+    })
+    @ApiQuery({
+        name: 'pageSize',
+        description: '每页条数',
+        type: Number
+    })
+    @ApiQuery({
+        name: 'username',
+        description: '用户名',
+        type: Number
+    })
+    @ApiQuery({
+        name: 'nickName',
+        description: '昵称',
+        type: Number
+    })
+    @ApiQuery({
+        name: 'email',
+        description: '邮箱地址',
+        type: Number
+    })
+    @ApiResponse({
+        type: UserListVo,
+        description: '用户列表',
+    })
+    @RequireLogin()
     @Get('list')
     async list(
         @Query(
