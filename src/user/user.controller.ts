@@ -95,13 +95,6 @@ export class UserController {
     }
 
     @ApiBearerAuth()
-    @ApiQuery({
-        name: 'email',
-        type: String,
-        description: '邮箱地址',
-        required: true,
-        example: 'xxx@xx.com'
-    })
     @ApiResponse({
         status: HttpStatus.OK,
         description: '发送成功',
@@ -109,7 +102,7 @@ export class UserController {
     })
     @RequireLogin()
     @Get('update_user/captcha')
-    async update_user_captcha(@Query('email') email: string) {
+    async update_user_captcha(@UserInfo('email') email: string) {
         return await this.userService.update_user_captcha(email)
     }
 
@@ -134,6 +127,7 @@ export class UserController {
         userVo.accessToken = this.jwtService.sign({
             userId: userVo.userInfo.id,
             username: userVo.userInfo.username,
+            email: userVo.userInfo.email,
             roles: userVo.userInfo.roles,
             permissions: userVo.userInfo.permissions
         }, {
