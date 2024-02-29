@@ -250,16 +250,17 @@ export class UserService {
 
     //用户修改信息
     async update(userId: number, updateUserDto: UpdateUserDto) {
-        const captcha = await this.redisService.get(`update_user_captcha_${updateUserDto.email}`)
+        const foundUser = await this.userRepository.findOneBy({ id: userId })
+        const captcha = await this.redisService.get(`update_user_captcha_${foundUser.email}`)
 
         if (!captcha) throw new HttpException('验证码失效', HttpStatus.BAD_REQUEST)
 
         if (captcha !== updateUserDto.captcha) throw new HttpException('验证码不正确', HttpStatus.BAD_REQUEST)
 
-        const foundUser = await this.userRepository.findOneBy({ id: userId })
+
         if (updateUserDto.headPic) foundUser.headPic = updateUserDto.headPic
         if (updateUserDto.nickName) foundUser.nickName = updateUserDto.nickName
-        foundUser.email = updateUserDto.email
+
 
         try {
             await this.userRepository.save(foundUser)
