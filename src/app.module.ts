@@ -17,6 +17,7 @@ import { FormatResponseInterceptor } from './format-response.interceptor';
 import { InvokeRecordInterceptor } from './invoke-record.interceptor';
 import { UnLoginFilter } from './unLogin.filter';
 import { CustomExceptionFilter } from './custom-exception.filter';
+import { FileModule } from './file/file.module';
 
 @Module({
     imports: [
@@ -61,7 +62,8 @@ import { CustomExceptionFilter } from './custom-exception.filter';
         }),
         UserModule,
         EmailModule,
-        RedisModule
+        RedisModule,
+        FileModule
     ],
     controllers: [AppController],
     providers: [

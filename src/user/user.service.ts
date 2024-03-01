@@ -260,6 +260,7 @@ export class UserService {
 
         if (updateUserDto.headPic) foundUser.headPic = updateUserDto.headPic
         if (updateUserDto.nickName) foundUser.nickName = updateUserDto.nickName
+        if (updateUserDto.phoneNumber) foundUser.phoneNumber = updateUserDto.phoneNumber
 
 
         try {
