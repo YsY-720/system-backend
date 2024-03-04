@@ -3,6 +3,7 @@ import { FileService } from './file.service'
 import { FileInterceptor } from '@nestjs/platform-express'
 import * as path from 'path'
 import { fileStorage } from 'src/utils'
+import { log } from 'console'
 
 @Controller('file')
 export class FileController {
@@ -26,7 +27,8 @@ export class FileController {
         }
     }))
     async upload(@UploadedFile() file: Express.Multer.File) {
-        return file.path
+        this.fileService.uploadFile(file.filename, file.path)
+        return file.filename
     }
 
 }
