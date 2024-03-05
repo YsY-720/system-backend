@@ -300,7 +300,10 @@ export class UserService {
             select: ['id', 'username', 'nickName', 'email', 'phoneNumber', 'headPic', 'isFrozen', 'createTime'],
             skip: skipCount,
             take: pageSize,
-            where: condition
+            where: {
+                ...condition,
+                isAdmin: false
+            }
         })
 
         const vo = new UserListVo()

@@ -164,6 +164,7 @@ export class UserController {
         adminVo.accessToken = this.jwtService.sign({
             userId: adminVo.userInfo.id,
             username: adminVo.userInfo.username,
+            email: adminVo.userInfo.email,
             roles: adminVo.userInfo.roles,
             permissions: adminVo.userInfo.permissions
         }, {
