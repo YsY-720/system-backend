@@ -9,39 +9,39 @@ import {
     Post,
     Query,
     UnauthorizedException
-} from '@nestjs/common';
-import { UserService } from './user.service';
-import { RegisterUserDto } from './dto/register-user.dto';
-import { LoginUserDto } from './dto/login-user.dto';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import { RequireLogin, UserInfo } from '../custom.decorator';
-import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { generateParseIntPipe } from '../utils';
-import { ApiBearerAuth, ApiBody, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { LoginUserVo } from './vo/login-user.vo';
-import { RefreshTokenVo } from './vo/refresh-token.vo';
-import { UserListVo } from './vo/user-list.vo';
-import { UserInfoVo } from './vo/user-info.vo';
+} from '@nestjs/common'
+import { UserService } from './user.service'
+import { RegisterUserDto } from './dto/register-user.dto'
+import { LoginUserDto } from './dto/login-user.dto'
+import { JwtService } from '@nestjs/jwt'
+import { ConfigService } from '@nestjs/config'
+import { RequireLogin, UserInfo } from '../custom.decorator'
+import { UpdateUserPasswordDto } from './dto/update-user-password.dto'
+import { UpdateUserDto } from './dto/update-user.dto'
+import { generateParseIntPipe } from '../utils'
+import { ApiBearerAuth, ApiBody, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger'
+import { LoginUserVo } from './vo/login-user.vo'
+import { RefreshTokenVo } from './vo/refresh-token.vo'
+import { UserListVo } from './vo/user-list.vo'
+import { UserInfoVo } from './vo/user-info.vo'
 
 @ApiTags('用户管理模块')
 @Controller('user')
 export class UserController {
 
     @Inject(UserService)
-    private readonly userService: UserService;
+    private readonly userService: UserService
 
     @Inject(JwtService)
-    private readonly jwtService: JwtService;
+    private readonly jwtService: JwtService
 
     @Inject(ConfigService)
-    private readonly configService: ConfigService;
+    private readonly configService: ConfigService
 
     @Get('init')
     async init() {
-        await this.userService.initData();
-        return 'done';
+        await this.userService.initData()
+        return 'done'
     }
 
     @ApiBody({ type: RegisterUserDto })
@@ -57,8 +57,8 @@ export class UserController {
     })
     @Post('register')
     async register(@Body() registerUserDto: RegisterUserDto) {
-        console.log(registerUserDto);
-        return await this.userService.register(registerUserDto);
+        console.log(registerUserDto)
+        return await this.userService.register(registerUserDto)
     }
 
     @ApiQuery({
@@ -75,7 +75,7 @@ export class UserController {
     })
     @Get('register_captcha')
     async login_captcha(@Query('email') email: string) {
-        return this.userService.login_captcha(email);
+        return this.userService.login_captcha(email)
     }
 
     @ApiQuery({
@@ -92,7 +92,7 @@ export class UserController {
     })
     @Get('update_password/captcha')
     async update_password_captcha(@Query('email') email: string) {
-        return await this.userService.update_password_captcha(email);
+        return await this.userService.update_password_captcha(email)
     }
 
     @ApiBearerAuth()
@@ -104,7 +104,7 @@ export class UserController {
     @RequireLogin()
     @Get('update_user/captcha')
     async update_user_captcha(@UserInfo('email') email: string) {
-        return await this.userService.update_user_captcha(email);
+        return await this.userService.update_user_captcha(email)
     }
 
     //普通用户登录
@@ -123,7 +123,7 @@ export class UserController {
     })
     @Post('login')
     async userLogin(@Body() userLogin: LoginUserDto) {
-        const userVo = await this.userService.userLogin(userLogin, false);
+        const userVo = await this.userService.userLogin(userLogin, false)
 
         userVo.accessToken = this.jwtService.sign({
             userId: userVo.userInfo.id,
@@ -133,15 +133,15 @@ export class UserController {
             permissions: userVo.userInfo.permissions
         }, {
             expiresIn: this.configService.get('JWT_ACCESS_TOKEN_EXPIRES_TIME') || '30m'
-        });
+        })
 
         userVo.refreshToken = this.jwtService.sign({
             userId: userVo.userInfo.id
         }, {
             expiresIn: this.configService.get('JWT_REFRESH_TOKEN_EXPIRES_TIME') || '7d'
-        });
+        })
 
-        return userVo;
+        return userVo
     }
 
     //管理员登录
@@ -160,7 +160,7 @@ export class UserController {
     })
     @Post('admin/login')
     async adminLogin(@Body() userLogin: LoginUserDto) {
-        const adminVo = await this.userService.userLogin(userLogin, true);
+        const adminVo = await this.userService.userLogin(userLogin, true)
 
         adminVo.accessToken = this.jwtService.sign({
             userId: adminVo.userInfo.id,
@@ -170,26 +170,27 @@ export class UserController {
             permissions: adminVo.userInfo.permissions
         }, {
             expiresIn: this.configService.get('JWT_ACCESS_TOKEN_EXPIRES_TIME') || '30m'
-        });
+        })
 
         adminVo.refreshToken = this.jwtService.sign({
             userId: adminVo.userInfo.id
         }, {
             expiresIn: this.configService.get('JWT_REFRESH_TOKEN_EXPIRES_TIME') || '7d'
-        });
+        })
 
-        return adminVo;
+        return adminVo
     }
 
     private setUserAccessToken = (user) => {
         return this.jwtService.sign({
             userId: user.id,
             username: user.username,
+            email: user.email,
             roles: user.roles,
             permissions: user.permissions
         }, {
             expiresIn: this.configService.get('JWT_ACCESS_TOKEN_EXPIRES_TIME') || '30m'
-        });
+        })
     };
 
     private setUserRefreshToken = user => {
@@ -197,7 +198,7 @@ export class UserController {
             userId: user.id
         }, {
             expiresIn: this.configService.get('JWT_REFRESH_TOKEN_EXPIRES_TIME') || '7d'
-        });
+        })
     };
 
     //用户刷新token
@@ -219,18 +220,18 @@ export class UserController {
     @Get('refresh')
     async userRefresh(@Query('refreshToken') refreshToken: string) {
         try {
-            const data = this.jwtService.verify(refreshToken);
+            const data = this.jwtService.verify(refreshToken)
 
-            const user = await this.userService.findOneById(data.userId, false);
+            const user = await this.userService.findOneById(data.userId, false)
 
-            const vo = new RefreshTokenVo();
-            vo.access_token = this.setUserAccessToken(user);
-            vo.refresh_token = this.setUserRefreshToken(user);
+            const vo = new RefreshTokenVo()
+            vo.access_token = this.setUserAccessToken(user)
+            vo.refresh_token = this.setUserRefreshToken(user)
 
-            return vo;
+            return vo
 
         } catch (e) {
-            throw new UnauthorizedException('token 已失效,请重新登陆');
+            throw new UnauthorizedException('token 已失效,请重新登陆')
         }
     }
 
@@ -253,18 +254,18 @@ export class UserController {
     @Get('admin/refresh')
     async adminRefresh(@Query('refreshToken') refreshToken: string) {
         try {
-            const data = this.jwtService.verify(refreshToken);
+            const data = this.jwtService.verify(refreshToken)
 
-            const user = await this.userService.findOneById(data.userId, true);
+            const user = await this.userService.findOneById(data.userId, true)
 
-            const vo = new RefreshTokenVo();
-            vo.access_token = this.setUserAccessToken(user);
-            vo.refresh_token = this.setUserRefreshToken(user);
+            const vo = new RefreshTokenVo()
+            vo.access_token = this.setUserAccessToken(user)
+            vo.refresh_token = this.setUserRefreshToken(user)
 
-            return vo;
+            return vo
 
         } catch (e) {
-            throw new UnauthorizedException('token 已失效,请重新登陆');
+            throw new UnauthorizedException('token 已失效,请重新登陆')
         }
     }
 
@@ -278,7 +279,7 @@ export class UserController {
     @Get('info')
     @RequireLogin()
     async info(@UserInfo('userId') userId: number) {
-        return await this.userService.findUserDetailBuId(userId);
+        return await this.userService.findUserDetailBuId(userId)
     }
 
     //修改密码
@@ -291,7 +292,7 @@ export class UserController {
     })
     @Post(['update_password', 'admin/update_password'])
     async updatePassword(@Body() passwordDto: UpdateUserPasswordDto) {
-        return await this.userService.updatePassword(passwordDto);
+        return await this.userService.updatePassword(passwordDto)
     }
 
     //修改信息
@@ -311,7 +312,7 @@ export class UserController {
     @Post(['update', 'admin/update'])
     @RequireLogin()
     async update(@UserInfo('userId') userId: number, @Body() updateUserDto: UpdateUserDto) {
-        return await this.userService.update(userId, updateUserDto);
+        return await this.userService.update(userId, updateUserDto)
     }
 
     //冻结用户
@@ -333,7 +334,7 @@ export class UserController {
     @RequireLogin()
     @Get('freeze')
     async freezeUserById(@Query('id', ParseIntPipe) id: number, @Query('isFrozen', ParseIntPipe) isFrozen: number) {
-        return await this.userService.freezeUserById(id, isFrozen);
+        return await this.userService.freezeUserById(id, isFrozen)
     }
 
     //用户列表分页查询
@@ -382,6 +383,6 @@ export class UserController {
         @Query('nickName') nickName: string,
         @Query('email') email: string
     ) {
-        return await this.userService.findUserByPage(pageNum, pageSize, username, nickName, email);
+        return await this.userService.findUserByPage(pageNum, pageSize, username, nickName, email)
     }
 }
