@@ -30,9 +30,7 @@ export class CreateMeetingRoomDto {
     })
     equipment: string
 
-    @IsNotEmpty({
-        message: '描述不能为空'
-    })
+
     @MaxLength(100, {
         message: '描述最长为 100 字符'
     })

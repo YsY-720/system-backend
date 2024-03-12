@@ -16,9 +16,10 @@ export class MeetingRoomController {
         @Query('pageNum', new DefaultValuePipe(1), generateParseIntPipe('pageNum')) pageNum: number,
         @Query('name') name: string,
         @Query('capacity') capacity: number,
-        @Query('equipment') equipment: string
+        @Query('equipment') equipment: string,
+        @Query('location') location: string
     ) {
-        return await this.meetingRoomService.find(pageSize, pageNum, name, capacity, equipment)
+        return await this.meetingRoomService.find(pageSize, pageNum, name, capacity, equipment, location)
     }
 
     //创建会议室

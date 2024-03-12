@@ -38,13 +38,14 @@ export class MeetingRoomService {
         this.meetingRoomRepository.insert([room1, room2, room3])
     }
 
-    async find(pageSize: number, pageNum: number, name?: string, capacity?: number, equipment?: string) {
+    async find(pageSize: number, pageNum: number, name?: string, capacity?: number, equipment?: string, location?: string) {
         const skipCont = (pageNum - 1) * pageSize
 
         const condition: Record<string, any> = {}
         if (name) condition.name = Like(`%${name}%`)
         if (capacity) condition.capacity = capacity
         if (equipment) condition.equipment = Like(`%${equipment}%`)
+        if (location) condition.location = Like(`%${location}%`)
 
         const [meetingRooms, totalCount] = await this.meetingRoomRepository.findAndCount({
             skip: skipCont,
@@ -55,7 +56,7 @@ export class MeetingRoomService {
     }
 
     async create(meetingRoomDto: CreateMeetingRoomDto) {
-        const room = this.meetingRoomRepository.findOneBy({ name: meetingRoomDto.name })
+        const room = await this.meetingRoomRepository.findOneBy({ name: meetingRoomDto.name })
 
         if (room) throw new BadRequestException('会议室已存在')
 
