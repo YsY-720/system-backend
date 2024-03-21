@@ -5,26 +5,50 @@ import { UpdateBookingDto } from './dto/update-booking.dto';
 import { generateParseIntPipe } from 'src/utils';
 import { UserInfo } from 'src/custom.decorator';
 
+interface QueryList {
+    pageNum: number;
+    pageSize: number;
+    username?: string;
+    meetingRoomName?: string;
+    meetingRoomPosition?: string;
+    startTime?: string;
+    endTime?: string;
+}
+
 @Controller('booking')
 export class BookingController {
     constructor(private readonly bookingService: BookingService) { }
 
     //会议室预定列表
-    @Get('list')
-    async list(
-        @Query('pageNum', new DefaultValuePipe(1), generateParseIntPipe('pageNum')) pageNum: number,
-        @Query('pageSize', new DefaultValuePipe(10), generateParseIntPipe('pageSize')) pageSize: number,
-        @Query('username') username: string,
-        @Query('meetingRoomName') meetingRoomName: string,
-        @Query('meetingRoomPosition') meetingRoomPosition: string,
-        @Query('bookingTimeRangeStart') bookingTimeRangeStart: string,
-        @Query('bookingTimeRangeEnd') bookingTimeRangeEnd: string,
-    ) {
-        return await this.bookingService.find(pageNum, pageSize, username, meetingRoomName, meetingRoomPosition, bookingTimeRangeStart, bookingTimeRangeEnd);
+    @Post('list')
+    async list(@Body() queryList: QueryList,) {
+        const { pageNum, pageSize, username, meetingRoomName, meetingRoomPosition, startTime, endTime } = queryList;
+        return await this.bookingService.find(pageNum, pageSize, username, meetingRoomName, meetingRoomPosition, startTime, endTime);
     }
 
     @Post('add')
     async add(@Body() createBookingDto: CreateBookingDto, @UserInfo('userId') userId: number) {
         return await this.bookingService.add(createBookingDto, userId);
+    }
+
+    @Get('apply/:id')
+    async apply(@Param('id') id: number) {
+        return await this.bookingService.apply(id);
+    }
+
+    @Get('reject/:id')
+    async reject(@Param('id') id: number) {
+        return await this.bookingService.reject(id);
+    }
+
+    @Get('unbind/:id')
+    async unbind(@Param('id') id: number) {
+        return await this.bookingService.unbind(id);
+    }
+
+
+    @Get('urge/:id')
+    async urge(@Param('id') id: number) {
+        return await this.bookingService.urge(id);
     }
 }
