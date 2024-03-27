@@ -26,21 +26,25 @@ export class BookingController {
         return await this.bookingService.find(pageNum, pageSize, username, meetingRoomName, meetingRoomPosition, startTime, endTime);
     }
 
+    //新增预定
     @Post('add')
     async add(@Body() createBookingDto: CreateBookingDto, @UserInfo('userId') userId: number) {
         return await this.bookingService.add(createBookingDto, userId);
     }
 
+    //审批通过
     @Get('apply/:id')
     async apply(@Param('id') id: number) {
         return await this.bookingService.apply(id);
     }
 
+    //审批驳回
     @Get('reject/:id')
     async reject(@Param('id') id: number) {
         return await this.bookingService.reject(id);
     }
 
+    //解除申请
     @Get('unbind/:id')
     async unbind(@Param('id') id: number) {
         return await this.bookingService.unbind(id);

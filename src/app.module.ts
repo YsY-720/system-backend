@@ -23,6 +23,8 @@ import { MeetingRoom } from './meeting-room/entities/meeting-room.entity';
 import { BookingModule } from './booking/booking.module';
 import { Booking } from './booking/entities/booking.entity';
 
+import * as path from 'path';
+
 @Module({
     imports: [
         TypeOrmModule.forRootAsync({
@@ -50,7 +52,7 @@ import { Booking } from './booking/entities/booking.entity';
         }),
         ConfigModule.forRoot({
             isGlobal: true,
-            envFilePath: 'src/.env'
+            envFilePath: path.join(__dirname, '.env')
         }),
         JwtModule.registerAsync({
             global: true,
